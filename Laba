@@ -1,0 +1,74 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import accuracy_score, confusion_matrix
+
+# 1. Завантажуємо базу параметрів квітів із файлу
+file_path = 'IrisData_full.csv'  # Вкажіть фактичний шлях до файлу
+df = pd.read_csv(file_path)
+
+# Відображаємо перші кілька рядків даних для перегляду структури
+print("1. Перші кілька рядків оригінальних даних:\n", df.head())
+
+# 2. Перемішуємо записи у завантаженій базі
+df = df.sample(frac=1, random_state=42).reset_index(drop=True)
+print("\n2. Перемішані дані (перші 5 рядків):\n", df.head())
+
+# Розділяємо ознаки і цільовий стовпець
+X = df.iloc[:, :-1].values
+y = df.iloc[:, -1].values
+
+# 3. Нормалізуємо параметри квітів ірису
+scaler = StandardScaler()
+X = scaler.fit_transform(X)
+print("\n3. Нормалізовані дані (перші 5 рядків):\n", X[:5])
+
+# 4. Розділяємо існуючі записи на навчальну і тестову вибірки (70% навчальна, 30% тестова)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4, random_state=42)
+print("\n4. Навчальна вибірка (перші 5 рядків):\n", X_train[:5])
+print("4. Тестова вибірка (перші 5 рядків):\n", X_test[:5])
+
+# 5. Навчаємо KNN-класифікатор з різними значеннями K і збираємо результати точності
+k_values = [3, 5, 7, 9, 11, 13, 15]
+accuracies = []
+
+print("\n5. Результати точності для різних значень K:")
+for k in k_values:
+    knn = KNeighborsClassifier(n_neighbors=k)
+    knn.fit(X_train, y_train)
+    y_pred = knn.predict(X_test)
+    accuracy = accuracy_score(y_test, y_pred)
+    accuracies.append(accuracy)
+    print(f"Точність для K={k}: {accuracy:.2f}")
+
+# 6. Знаходимо всі значення K з найвищою точністю
+max_accuracy = max(accuracies)
+best_k_values = [k_values[i] for i, acc in enumerate(accuracies) if acc == max_accuracy]
+print(f"\n6. Найкращі значення K: {best_k_values} з точністю: {max_accuracy:.2f}")
+
+# 7. Візуалізація залежності точності від значення K
+plt.figure(figsize=(10, 6))
+plt.plot(k_values, accuracies, marker='o', linestyle='-', color='b')
+plt.xlabel('Кількість сусідів (K)')
+plt.ylabel('Точність')
+plt.title('Залежність точності від значення K')
+plt.grid()
+plt.show()
+
+# 8. Матриця плутанини для одного з найкращих значень K (обираємо перше з них)
+best_k = best_k_values[0]
+knn = KNeighborsClassifier(n_neighbors=best_k)
+knn.fit(X_train, y_train)
+y_pred_best = knn.predict(X_test)
+
+conf_matrix = confusion_matrix(y_test, y_pred_best)
+plt.figure(figsize=(8, 6))
+sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues', xticklabels=np.unique(y), yticklabels=np.unique(y))
+plt.xlabel('Передбачений клас')
+plt.ylabel('Реальний клас')
+plt.title(f' Матриця плутанини для K={best_k}')
+plt.show()
